@@ -1,12 +1,14 @@
 #!/usr/bin/ruby
 
+require "pry"
+
+require_relative "reading"
 require "csv"
 require "fileutils"
-require "pry"
 
 INPUT_FILE             = ARGV.shift
 MAX_REFINING_RUNS      = ARGV.shift.to_i || 2
-OUTPUT_DIR             = "data/processed"
+OUTPUT_DIR             = "data/processed/chems"
 STDDEVS_TO_BE_ATYPICAL = 1
 
 class DataRefiner
@@ -20,7 +22,7 @@ class DataRefiner
       errored_readings_for_chemical = refine_readings(refined_readings_for_chemical.atypical).atypical
       refined_readings_for_chemical.atypical -= errored_readings_for_chemical
 
-      store_readings(csv_headers, refined_readings_for_chemical, errored_readings_for_chemical)
+      store_readings_for_chemical(csv_headers, refined_readings_for_chemical, errored_readings_for_chemical)
       print "."
     end
 
@@ -41,7 +43,7 @@ class DataRefiner
     readings
   end
 
-  def store_readings(headers, valid_readings, errored_readings)
+  def store_readings_for_chemical(headers, valid_readings, errored_readings)
     %i[normal atypical errored].each do |reading_type|
       file_name = "#{OUTPUT_DIR}/#{valid_readings.chemical.downcase}-#{reading_type}.csv"
 
@@ -57,38 +59,6 @@ class DataRefiner
 
         sorted_readings.each { |reading| csv_file << reading.to_a }
       end
-    end
-  end
-
-  Reading = Struct.new(:chemical, :raw_monitor, :raw_date_time, :raw_value) do
-    include Comparable
-
-    def date_time
-      @date_time ||= date_from(raw_date_time)
-    end
-
-    def monitor
-      @monitor ||= raw_monitor.to_i
-    end
-
-    def value
-      @value ||= raw_value.to_f
-    end
-
-    def <=>(other)
-      [monitor, date_time] <=> [other.monitor, other.date_time]
-    end
-
-    private
-
-    def date_from(raw_date_time, base_year = 2000)
-      date_str, time_str        = raw_date_time.split(" ")
-      month, day, relative_year = date_str.split("/").map(&:to_i)
-
-      base_year -= 100 if relative_year > DateTime.now.year.to_s[-2..-1].to_i
-      year          = base_year + relative_year
-      hour, minutes = time_str.split(":").map(&:to_i)
-      DateTime.new(year, month, day, hour, minutes)
     end
   end
 
