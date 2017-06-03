@@ -17,10 +17,13 @@ class DataRefiner
 
     readings_by_chemical.each do |(_, readings_for_chemical)|
       refined_readings_for_chemical = refine_readings(readings_for_chemical)
-      store_readings(csv_headers, refined_readings_for_chemical)
+      errored_readings_for_chemical = refine_readings(refined_readings_for_chemical.atypical).atypical
+      refined_readings_for_chemical.atypical -= errored_readings_for_chemical
+
+      store_readings(csv_headers, refined_readings_for_chemical, errored_readings_for_chemical)
       print "."
-      binding.pry
     end
+
     print "\n"
   end
 
@@ -38,13 +41,20 @@ class DataRefiner
     readings
   end
 
-  def store_readings(headers, readings)
-    %i[normal atypical].each do |typicality|
-      file_name = "#{OUTPUT_DIR}/#{readings.chemical.downcase}-#{typicality}.csv"
+  def store_readings(headers, valid_readings, errored_readings)
+    %i[normal atypical errored].each do |reading_type|
+      file_name = "#{OUTPUT_DIR}/#{valid_readings.chemical.downcase}-#{reading_type}.csv"
 
       CSV.open(file_name, "w") do |csv_file|
         csv_file << headers
-        sorted_readings = readings.public_send(typicality).sort
+
+        sorted_readings =
+          if reading_type == :errored
+            errored_readings
+          else
+            valid_readings.public_send(reading_type).sort
+          end
+
         sorted_readings.each { |reading| csv_file << reading.to_a }
       end
     end
@@ -94,12 +104,12 @@ class DataRefiner
       end
 
       def from_array(readings)
-        readings_stats         = Stats.from(readings, :value)
-        readings_by_typicality = readings.group_by { |reading| readings_stats.atypical?(reading.value) }
+        readings_stats        = Stats.from(readings, :value)
+        readings_by_normality = readings.group_by { |reading| readings_stats.normal?(reading.value) }
 
         new(
-          normal:   readings_by_typicality.fetch(true, []),
-          atypical: readings_by_typicality.fetch(false, [])
+          normal:   readings_by_normality.fetch(true, []),
+          atypical: readings_by_normality.fetch(false, [])
         )
       end
 
@@ -150,8 +160,8 @@ class DataRefiner
       end
     end
 
-    def atypical?(value)
-      (value - avg).abs > stddev * STDDEVS_TO_BE_ATYPICAL
+    def normal?(value)
+      (value - avg).abs <= stddev * STDDEVS_TO_BE_ATYPICAL
     end
   end
 end
