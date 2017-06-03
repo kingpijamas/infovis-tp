@@ -2,6 +2,7 @@
 
 require "csv"
 require "fileutils"
+require "pry"
 
 INPUT_FILE             = ARGV.shift
 MAX_REFINING_RUNS      = ARGV.shift.to_i || 2
@@ -18,6 +19,7 @@ class DataRefiner
       refined_readings_for_chemical = refine_readings(readings_for_chemical)
       store_readings(csv_headers, refined_readings_for_chemical)
       print "."
+      binding.pry
     end
     print "\n"
   end
