@@ -2,7 +2,7 @@
 
 require "pry"
 
-require_relative "reading"
+require_relative "chem_reading"
 require "csv"
 require "fileutils"
 
@@ -14,7 +14,7 @@ STDDEVS_TO_BE_ATYPICAL = 1
 class DataRefiner
   def refine(path)
     csv_headers, *csv_rows = CSV.read(path)
-    readings               = csv_rows.map { |row| Reading.new(*row) }
+    readings               = csv_rows.map { |row| ChemReading.new(*row) }
     readings_by_chemical   = readings.group_by(&:chemical)
 
     readings_by_chemical.each do |(_, readings_for_chemical)|

@@ -2,14 +2,14 @@
 
 require "pry"
 
-require_relative "reading"
+require_relative "chem_reading"
 require "csv"
 require "fileutils"
 
 INPUT_DIR  = ARGV.shift || "data/processed/chems"
 OUTPUT_DIR = "data/processed/monitor-errors"
 
-class DataMerger
+class ChemDataMerger
   def merge(path)
     csv_headers, errored_readings = readings_in(path, :errored)
     errored_readings_by_monitor   = errored_readings.group_by(&:monitor)
@@ -26,7 +26,7 @@ class DataMerger
 
     readings = Dir["#{dir}/*-#{type}.csv"].flat_map do |file_name|
       csv_headers, *csv_rows = CSV.read(file_name)
-      csv_rows.map { |row| Reading.new(*row) }
+      csv_rows.map { |row| ChemReading.new(*row) }
     end
 
     [csv_headers, readings]
@@ -50,4 +50,4 @@ class DataMerger
 end
 
 FileUtils.mkdir_p OUTPUT_DIR
-DataMerger.new.merge(INPUT_DIR)
+ChemDataMerger.new.merge(INPUT_DIR)
