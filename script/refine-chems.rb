@@ -1,15 +1,40 @@
 #!/usr/bin/ruby
 
 require "pry"
-
-require_relative "chem_reading"
 require "csv"
 require "fileutils"
 
-INPUT_FILE             = ARGV.shift
-MAX_REFINING_RUNS      = ARGV.shift.to_i || 2
-OUTPUT_DIR             = "data/processed/chems"
-STDDEVS_TO_BE_ATYPICAL = 1
+require_relative "../src/script_params"
+require_relative "../src/chem_reading"
+
+params = ScriptParams.new(
+  {
+    name:      "from",
+    attr:      "input_file"
+  },
+  {
+    name:      "runs",
+    long_name: "Max refining runs",
+    attr:      "max_refining_runs",
+    default:   2,
+    cast:      :to_i
+  },
+  {
+    name:      "output-dir",
+    default:   "data/processed/chems"
+  },
+  {
+    name:      "atypical-stddevs",
+    long_name: "StdDevs to be atypical",
+    default:   1,
+    cast:      :to_i
+  }
+).read!
+
+INPUT_FILE             = params.fetch(:input_file)
+OUTPUT_DIR             = params.fetch(:output_dir)
+MAX_REFINING_RUNS      = params.fetch(:max_refining_runs)
+STDDEVS_TO_BE_ATYPICAL = params.fetch(:atypical_stddevs)
 
 class DataRefiner
   def refine(path)

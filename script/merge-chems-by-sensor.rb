@@ -1,13 +1,26 @@
 #!/usr/bin/ruby
 
 require "pry"
-
-require_relative "chem_reading"
 require "csv"
 require "fileutils"
 
-INPUT_DIR  = ARGV.shift || "data/processed/chems"
-OUTPUT_DIR = "data/processed/monitor-errors"
+require_relative "../src/script_params"
+require_relative "../src/chem_reading"
+
+params = ScriptParams.new(
+  {
+    name:    "from",
+    attr:    "input_dir",
+    default: "data/processed/chems"
+  },
+  {
+    name:    "output-dir",
+    default: "data/processed/monitor-errors"
+  }
+).read!
+
+INPUT_DIR  = params.fetch(:input_dir)
+OUTPUT_DIR = params.fetch(:output_dir)
 
 class ChemDataMerger
   def merge(path)

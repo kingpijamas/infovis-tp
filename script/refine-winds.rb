@@ -4,11 +4,27 @@ require "pry"
 require "csv"
 require "fileutils"
 
-require_relative "wind_reading"
+require_relative "../src/script_params"
+require_relative "../src/wind_reading"
 
-INPUT_FILE  = ARGV.shift
-OUTPUT_DIR  = "data/processed"
-OUTPUT_FILE = "winds.csv"
+params = ScriptParams.new(
+  {
+    name:    "from",
+    attr:    "input_file"
+  },
+  {
+    name:    "output-dir",
+    default: "data/processed"
+  },
+  {
+    name:    "output-file",
+    default: "winds.csv"
+  }
+).read!
+
+INPUT_FILE  = params.fetch(:input_file)
+OUTPUT_DIR  = params.fetch(:output_dir)
+OUTPUT_FILE = params.fetch(:output_file)
 
 class WindRefiner
   WIND_READING_ATTRS_COUNT = WindReading.members.count - 1
