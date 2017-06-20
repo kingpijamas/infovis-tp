@@ -17,7 +17,7 @@ WindReading = Struct.new(:raw_date_time, :raw_from_direction, :raw_speed) do
   end
 
   def to_direction
-    @to_direction ||= raw_from_direction * -1
+    @to_direction ||= from_direction * -1
   end
 
   def speed

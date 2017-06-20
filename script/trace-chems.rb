@@ -26,7 +26,8 @@ params = ScriptParams.read!(
     cast: read_rows(ChemReading)
   },
   {
-    name: "lookback",
+    name: "lookback-secs",
+    attr: "lookback",
     cast: :to_i
   },
   {
@@ -64,8 +65,8 @@ class ChemTracer
   end
 
   def trace
-    factories_and_emission_counts = factories.map { |factory| [factory.name, emission_counts(factory)] }
-    factories_and_emission_counts.sort_by(&:second).reverse
+    factories_and_emission_counts = factories.map { |factory| [factory, emission_counts(factory)] }
+    factories_and_emission_counts.sort_by(&:last).reverse
   end
 
   private
@@ -93,7 +94,9 @@ class ChemTracer
   end
 
   def chem_monitors_by_id
-    @chem_monitors_by_id ||= chem_monitors.group_by(&:id)
+    @chem_monitors_by_id ||= chem_monitors.each_with_object({}) do |chem_monitor, result|
+      result[chem_monitor.id] ||= chem_monitor
+    end
   end
 
   def wind_periods
@@ -104,31 +107,24 @@ class ChemTracer
     class << self
       def all_from(wind_readings, chem_readings)
         wind_readings      = wind_readings.sort
-        chem_readings      = chem_readings.lazy
         wind_reading_pairs = wind_readings.each_slice(2)
 
-        wind_reading_pairs.map do |wind_readings|
-          wind_times_range = time_range_for(wind_readings)
+        wind_reading_pairs.map do |wind_readings_pair|
+          wind_reading_times  = wind_readings_pair.map(&:date_time)
+          wind_readings_range = wind_reading_times.first...wind_reading_times.last
 
           new(
-            wind_reading:  wind_readings.first,
-            duration:      Dates.seconds_between(*wind_times_range),
-            chem_readings: readings_between(wind_times_range, chem_readings)
+            wind_reading:  wind_readings_pair.first,
+            duration:      Dates.seconds_between(*wind_reading_times),
+            chem_readings: readings_within(wind_readings_range, chem_readings)
           )
         end
       end
 
       private
 
-      def time_range_for(readings)
-        reading_times = readings.map(&:date_time)
-        reading_times.first...reading_times.last
-      end
-
       def readings_within(time_range, readings)
-        readings.take_while do |reading|
-          time_range.include? reading.date_time
-        end
+        readings.select { |reading| time_range.include? reading.date_time }
       end
     end
 
@@ -140,6 +136,10 @@ class ChemTracer
   end
 
   class EmissionOrigin < Struct.new(:position, :date_time)
+    extend Forwardable
+
+    def_delegators :position, *%i[x y distance_to]
+
     def self.from(chem_monitor:, chem_reading:, wind_reading:, lookback:)
       new(
         position:  wind_reading.origin(chem_monitor.position, lookback),
@@ -159,4 +159,12 @@ class ChemTracer
       position.distance_to(center) <= radius
     end
   end
+end
+
+chem_tracings = ChemTracer.new(**params).trace
+
+puts "FACTORY | EMISSION COUNTS"
+puts "-------------------------"
+chem_tracings.each do |(factory, emission_counts)|
+  puts "#{factory.name}, #{emission_counts}"
 end

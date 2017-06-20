@@ -9,7 +9,7 @@ module Dates
     DateTime.new(year, month, day, hour, minutes)
   end
 
-  def self.seconds_between(*time_range)
-    ((time_range.last - time_range.first) * 24 * 60 * 60).to_i
+  def self.seconds_between(*times)
+    ((times.last - times.first) * 24 * 60 * 60).to_i
   end
 end

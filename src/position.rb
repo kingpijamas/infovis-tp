@@ -12,6 +12,6 @@ Position = Struct.new(:raw_x, :raw_y) do
   end
 
   def distance_to(other)
-    sqrt((x - other.x) ** 2 + (y - other.y) ** 2)
+    Math.sqrt((x - other.x) ** 2 + (y - other.y) ** 2)
   end
 end
