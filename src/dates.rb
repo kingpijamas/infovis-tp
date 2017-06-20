@@ -8,4 +8,8 @@ module Dates
     hour, minutes = time_str.split(":").map(&:to_i)
     DateTime.new(year, month, day, hour, minutes)
   end
+
+  def self.seconds_between(*time_range)
+    ((time_range.last - time_range.first) * 24 * 60 * 60).to_i
+  end
 end

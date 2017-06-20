@@ -1,7 +1,12 @@
 require_relative "dates"
+require_relative "position"
 
 WindReading = Struct.new(:raw_date_time, :raw_from_direction, :raw_speed) do
   include Comparable
+
+  def self.all_from(rows)
+    rows.map { |row| new(*row) }
+  end
 
   def date_time
     @date_time ||= Dates.date_from(raw_date_time)
@@ -17,6 +22,13 @@ WindReading = Struct.new(:raw_date_time, :raw_from_direction, :raw_speed) do
 
   def speed
     @speed ||= raw_speed.to_f
+  end
+
+  def origin(position, lookback)
+    Position.new(
+      position.x - speed * lookback * Math.sin(to_direction),
+      position.y - speed * lookback * Math.cos(to_direction)
+    )
   end
 
   def <=>(other)

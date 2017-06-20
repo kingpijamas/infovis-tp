@@ -4,6 +4,10 @@ require "optparse"
 class ScriptParams
   attr_reader :params
 
+  def self.read!(*raw_param_definitions)
+    new(*raw_param_definitions).read!
+  end
+
   def initialize(*raw_param_definitions)
     @param_definitions = raw_param_definitions.map(&ParamDefinition.method(:from))
     @params            = {}
@@ -35,7 +39,14 @@ class ScriptParams
       attr_name = param_definition.attr_name
 
       if @params.key?(attr_name)
-        @params[attr_name] = @params[attr_name].public_send(param_definition.cast) if param_definition.cast
+        case cast = param_definition.cast
+        when nil
+          next
+        when Symbol
+          @params[attr_name] = @params[attr_name].public_send(cast)
+        else
+          @params[attr_name] = cast.call(@params[attr_name])
+        end
       elsif !param_definition.required?
         @params[attr_name] ||= param_definition.default_value
       end

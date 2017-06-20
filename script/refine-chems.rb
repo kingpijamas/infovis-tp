@@ -7,7 +7,7 @@ require "fileutils"
 require_relative "../src/script_params"
 require_relative "../src/chem_reading"
 
-params = ScriptParams.new(
+params = ScriptParams.read!(
   {
     name:      "from",
     attr:      "input_file"
@@ -29,7 +29,7 @@ params = ScriptParams.new(
     default:   1,
     cast:      :to_i
   }
-).read!
+)
 
 INPUT_FILE             = params.fetch(:input_file)
 OUTPUT_DIR             = params.fetch(:output_dir)
@@ -39,7 +39,7 @@ STDDEVS_TO_BE_ATYPICAL = params.fetch(:atypical_stddevs)
 class DataRefiner
   def refine(path)
     csv_headers, *csv_rows = CSV.read(path)
-    readings               = csv_rows.map { |row| ChemReading.new(*row) }
+    readings               = ChemReading.all_from(row)
     readings_by_chemical   = readings.group_by(&:chemical)
 
     readings_by_chemical.each do |(_, readings_for_chemical)|

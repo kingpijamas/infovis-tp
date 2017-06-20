@@ -7,7 +7,7 @@ require "fileutils"
 require_relative "../src/script_params"
 require_relative "../src/wind_reading"
 
-params = ScriptParams.new(
+params = ScriptParams.read!(
   {
     name:    "from",
     attr:    "input_file"
@@ -20,7 +20,7 @@ params = ScriptParams.new(
     name:    "output-file",
     default: "winds.csv"
   }
-).read!
+)
 
 INPUT_FILE  = params.fetch(:input_file)
 OUTPUT_DIR  = params.fetch(:output_dir)
@@ -35,7 +35,7 @@ class WindRefiner
       result << relevant_values if relevant_values.any?
     end
 
-    readings = csv_rows.map { |row| WindReading.new(*row) }
+    readings = WindReading.all_from(csv_rows)
 
     store_readings(csv_headers, readings)
   end

@@ -1,14 +1,18 @@
 require_relative "dates"
 
-ChemReading = Struct.new(:chemical, :raw_monitor, :raw_date_time, :raw_value) do
+ChemReading = Struct.new(:chemical, :raw_monitor_id, :raw_date_time, :raw_value) do
   include Comparable
+
+  def self.all_from(rows)
+    rows.map { |row| new(*row) }
+  end
 
   def date_time
     @date_time ||= Dates.date_from(raw_date_time)
   end
 
-  def monitor
-    @monitor ||= raw_monitor.to_i
+  def monitor_id
+    @monitor_id ||= raw_monitor_id.to_i
   end
 
   def value
