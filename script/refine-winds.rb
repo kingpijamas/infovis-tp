@@ -3,14 +3,29 @@
 require "pry"
 require "csv"
 require "fileutils"
+require "interpolate"
 
 require_relative "../src/script_params"
 require_relative "../src/wind_reading"
+require_relative "../src/chem_reading"
+
+def read_rows(klass)
+  -> (file_name) do
+    _headers, *rows = CSV.read(file_name)
+    klass.all_from(rows)
+  end
+end
 
 params = ScriptParams.read!(
   {
     name:    "from",
     attr:    "input_file"
+  },
+  {
+    name:    "interpolate-to-chems",
+    attr:    "chems",
+    cast:    read_rows(ChemReading),
+    default: []
   },
   {
     name:    "output-dir",
@@ -22,9 +37,10 @@ params = ScriptParams.read!(
   }
 )
 
-INPUT_FILE  = params.fetch(:input_file)
-OUTPUT_DIR  = params.fetch(:output_dir)
-OUTPUT_FILE = params.fetch(:output_file)
+INPUT_FILE              = params.fetch(:input_file)
+OUTPUT_DIR              = params.fetch(:output_dir)
+OUTPUT_FILE             = params.fetch(:output_file)
+CHEMS_TO_INTERPOLATE_TO = params.fetch(:chems)
 
 class WindRefiner
   WIND_READING_ATTRS_COUNT = WindReading.members.count - 1
@@ -37,10 +53,50 @@ class WindRefiner
 
     readings = WindReading.all_from(csv_rows)
 
+    if CHEMS_TO_INTERPOLATE_TO.any?
+      wind_interpolator = WindInterpolator.from(readings, CHEMS_TO_INTERPOLATE_TO)
+      readings += wind_interpolator.wind_interpolations
+      readings.uniq!(&:date_time).sort!
+    end
+
     store_readings(csv_headers, readings)
   end
 
   private
+
+  class WindInterpolator < Struct.new(:base_time, :wind_interpolation, :chem_readings)
+    def self.from(wind_readings, chem_readings)
+      chem_readings = chem_readings.uniq(&:date_time)
+      base_time     = (wind_readings + chem_readings).map(&:date_time).min
+
+      interpolation_reference = wind_readings.each_with_object({}) do |wind_reading, result|
+        seconds_from_base_time         = Dates.seconds_between(wind_reading.date_time, base_time)
+        from_direction                 = wind_reading.from_direction
+        speed                          = wind_reading.speed
+        result[seconds_from_base_time] = [from_direction, speed]
+      end
+
+      new(
+        base_time:          base_time,
+        wind_interpolation: Interpolate::Points.new(interpolation_reference),
+        chem_readings:      chem_readings
+      )
+    end
+
+    def initialize(**kwargs)
+      super(*members.map { |attr| kwargs.fetch(attr) })
+    end
+
+    def wind_interpolations
+      chem_readings.map do |chem_reading|
+        seconds_from_base_time = Dates.seconds_between(chem_reading.date_time, base_time)
+        date_time              = Dates.add_seconds(base_time, seconds_from_base_time)
+        from_direction, speed  = wind_interpolation.at(seconds_from_base_time)
+
+        WindReading.new(Dates.format(date_time), from_direction, speed)
+      end
+    end
+  end
 
   def store_readings(headers, readings)
     sorted_readings = readings.sort
