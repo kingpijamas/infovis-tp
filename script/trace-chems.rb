@@ -22,33 +22,36 @@ end
 
 params = ScriptParams.read!(
   {
-    name: "chem",
-    attr: "chem_readings",
-    cast: read_rows(ChemReading)
+    name:    "chem",
+    attr:    "chem_readings",
+    cast:    read_rows(ChemReading)
   },
   {
-    name: "lookback-secs",
-    attr: "lookback",
-    cast: :to_i
+    name:    "lookback-secs",
+    attr:    "lookback",
+    cast:    :to_i
   },
   {
-    name: "winds",
-    attr: "wind_readings",
-    cast: read_rows(WindReading)
+    name:    "winds",
+    attr:    "wind_readings",
+    default: "data/processed/winds.csv",
+    cast:    { value: read_rows(WindReading), mode: :all }
   },
   {
-    name: "range",
-    attr: "acceptable_range",
-    cast: :to_f
+    name:    "range",
+    attr:    "acceptable_range",
+    cast:    :to_f
   },
   {
-    name: "factories",
-    cast: read_rows(Factory)
+    name:    "factories",
+    default: "data/processed/factories.csv",
+    cast:    { value: read_rows(Factory), mode: :all }
   },
   {
-    name: "monitors",
-    attr: "chem_monitors",
-    cast: read_rows(ChemMonitor)
+    name:    "monitors",
+    attr:    "chem_monitors",
+    default: "data/processed/monitors.csv",
+    cast:    { value: read_rows(ChemMonitor), mode: :all }
   }
 )
 

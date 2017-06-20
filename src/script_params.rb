@@ -39,17 +39,24 @@ class ScriptParams
       attr_name = param_definition.attr_name
 
       if @params.key?(attr_name)
-        case cast = param_definition.cast
-        when nil
-          next
-        when Symbol
-          @params[attr_name] = @params[attr_name].public_send(cast)
-        else
-          @params[attr_name] = cast.call(@params[attr_name])
-        end
+        apply_cast!(param_definition)
       elsif !param_definition.required?
         @params[attr_name] ||= param_definition.default_value
+        apply_cast!(param_definition) if param_definition.cast_all?
       end
+    end
+  end
+
+  def apply_cast!(param_definition)
+    attr_name = param_definition.attr_name
+
+    case cast = param_definition.cast
+    when nil
+      return
+    when Symbol
+      @params[attr_name] = @params[attr_name].public_send(cast)
+    else
+      @params[attr_name] = cast.call(@params[attr_name])
     end
   end
 
@@ -61,7 +68,7 @@ class ScriptParams
     end
   end
 
-  ParamDefinition = Struct.new(:name, :long_name, :attr_name, :default_value, :required, :cast) do
+  ParamDefinition = Struct.new(:name, :long_name, :attr_name, :default_value, :required, :cast_schema) do
     def self.from(args)
       args = { name: param_definition } unless args.is_a? Hash
 
@@ -70,9 +77,29 @@ class ScriptParams
       attr_name     = (args[:attr]     || name.gsub(/-/, "_")).to_sym
       default_value = args[:default]
       required      = !args.key?(:default)
-      cast          = args[:cast]
+      cast_schema   =
+        case args[:cast]
+        when Hash
+          args[:cast]
+        else
+          { value: args[:cast], mode: :given_only }
+        end
 
-      new(name, long_name, attr_name, default_value, required, cast)
+      new(name, long_name, attr_name, default_value, required, cast_schema)
+    end
+
+    def cast_all?
+      cast_mode == :all
+    end
+
+    def cast
+      return unless cast_schema
+      cast_schema.fetch(:value)
+    end
+
+    def cast_mode
+      return unless cast_schema
+      cast_schema.fetch(:mode)
     end
 
     alias_method :required?, :required
