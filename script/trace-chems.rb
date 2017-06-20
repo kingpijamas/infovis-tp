@@ -113,7 +113,7 @@ class ChemTracer
     class << self
       def all_from(wind_readings, chem_readings)
         wind_readings      = wind_readings.sort
-        wind_reading_pairs = wind_readings.each_slice(2)
+        wind_reading_pairs = wind_readings.each_cons(2)
 
         wind_reading_pairs.map do |wind_readings_pair|
           wind_reading_times  = wind_readings_pair.map(&:date_time)
@@ -130,7 +130,9 @@ class ChemTracer
       private
 
       def readings_within(time_range, readings)
-        readings.select { |reading| time_range.include? reading.date_time }
+        readings.select do |reading|
+          time_range.first <= reading.date_time && reading.date_time < time_range.last
+        end
       end
     end
 
