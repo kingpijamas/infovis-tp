@@ -3,6 +3,7 @@
 require "pry"
 require "csv"
 require "fileutils"
+require "table_print"
 
 require_relative "../src/script_params"
 require_relative "../src/wind_reading"
@@ -65,8 +66,10 @@ class ChemTracer
   end
 
   def trace
-    factories_and_emission_counts = factories.map { |factory| [factory, emission_counts(factory)] }
-    factories_and_emission_counts.sort_by(&:last).reverse
+    factories_and_emission_counts = factories.map do |factory|
+      FactoryAndEmissionsCount.new(factory, emission_counts(factory))
+    end
+    factories_and_emission_counts.sort_by(&:emissions_count).reverse
   end
 
   private
@@ -159,12 +162,14 @@ class ChemTracer
       position.distance_to(center) <= radius
     end
   end
+
+  FactoryAndEmissionsCount = Struct.new(:factory, :emissions_count)
 end
 
 chem_tracings = ChemTracer.new(**params).trace
 
-puts "FACTORY | EMISSION COUNTS"
-puts "-------------------------"
-chem_tracings.each do |(factory, emission_counts)|
-  puts "#{factory.name}, #{emission_counts}"
-end
+tp(
+  chem_tracings,
+  { "factory"     => -> (chem_tracing) { chem_tracing.factory.name } },
+  { "emissions #" => -> (chem_tracing) { chem_tracing.emissions_count } }
+)
