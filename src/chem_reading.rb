@@ -20,6 +20,6 @@ ChemReading = Struct.new(:chemical, :raw_monitor_id, :raw_date_time, :raw_value)
   end
 
   def <=>(other)
-    [monitor, date_time] <=> [other.monitor, other.date_time]
+    [monitor_id, date_time] <=> [other.monitor_id, other.date_time]
   end
 end

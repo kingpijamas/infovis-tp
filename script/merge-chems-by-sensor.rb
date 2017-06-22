@@ -14,32 +14,41 @@ params = ScriptParams.read!(
     default: "data/processed/chems"
   },
   {
+    name:    "type",
+    attr:    "reading_types",
+    default: [:errored],
+    cast:    -> (raw_types) { Array(raw_types).map(&:to_sym) }
+  },
+  {
     name:    "output-dir",
     default: "data/processed/monitor-errors"
   }
 )
 
-INPUT_DIR  = params.fetch(:input_dir)
-OUTPUT_DIR = params.fetch(:output_dir)
+INPUT_DIR     = params.fetch(:input_dir)
+OUTPUT_DIR    = params.fetch(:output_dir)
+READING_TYPES = params.fetch(:reading_types)
 
 class ChemDataMerger
   def merge(path)
-    csv_headers, errored_readings = readings_in(path, :errored)
-    errored_readings_by_monitor   = errored_readings.group_by(&:monitor_id)
+    csv_headers, readings = readings_in(path, READING_TYPES)
+    readings_by_monitor   = readings.group_by(&:monitor_id)
 
-    errored_readings_by_monitor.each do |(monitor_id, errored_readings_for_monitor)|
-      store_monitor_readings(csv_headers, errored_readings_for_monitor)
+    readings_by_monitor.each do |(monitor_id, readings_for_monitor)|
+      store_monitor_readings(csv_headers, readings_for_monitor)
     end
   end
 
   private
 
-  def readings_in(dir, type)
+  def readings_in(dir, types)
     csv_headers = nil
 
-    readings = Dir["#{dir}/*-#{type}.csv"].flat_map do |file_name|
-      csv_headers, *csv_rows = CSV.read(file_name)
-      ChemReading.all_from(csv_rows)
+    readings = types.flat_map do |type|
+      Dir["#{dir}/*-#{type}.csv"].flat_map do |file_name|
+        csv_headers, *csv_rows = CSV.read(file_name)
+        ChemReading.all_from(csv_rows)
+      end
     end
 
     [csv_headers, readings]
@@ -48,7 +57,7 @@ class ChemDataMerger
   def store_monitor_readings(csv_headers, monitor_readings)
     sorted_readings = monitor_readings.sort(&method(:sort_readings))
 
-    CSV.open("#{OUTPUT_DIR}/monitor-#{monitor_readings.first.monitor}.csv", "w") do |csv_file|
+    CSV.open("#{OUTPUT_DIR}/monitor-#{monitor_readings.first.monitor_id}.csv", "w") do |csv_file|
       csv_file << csv_headers if csv_headers
       sorted_readings.each { |reading| csv_file << reading.to_a }
     end
