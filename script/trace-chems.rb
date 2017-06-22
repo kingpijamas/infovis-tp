@@ -52,12 +52,18 @@ params = ScriptParams.read!(
     attr:    "chem_monitors",
     default: "data/processed/monitors.csv",
     cast:    { value: read_rows(ChemMonitor), mode: :all }
+  },
+  {
+    name:    "store-origins",
+    attr:    "emission_origins_output_file",
+    default: nil
   }
 )
 
 class ChemTracer
   MANDATORY_PARAMS = %i[
     chem_readings lookback wind_readings factories chem_monitors acceptable_range
+    emission_origins_output_file
   ].freeze
 
   attr_reader *MANDATORY_PARAMS
@@ -72,6 +78,9 @@ class ChemTracer
     factories_and_emission_counts = factories.map do |factory|
       FactoryAndEmissionsCount.new(factory, emission_counts(factory))
     end
+
+    store_emission_origins! if emission_origins_output_file
+
     factories_and_emission_counts.sort_by(&:emissions_count).reverse
   end
 
@@ -107,6 +116,15 @@ class ChemTracer
 
   def wind_periods
     @wind_periods ||= WindPeriod.all_from(wind_readings, chem_readings)
+  end
+
+  def store_emission_origins!
+    CSV.open("#{emission_origins_output_file}", "w") do |csv_file|
+      csv_file << %w[X Y DateTime]
+      emission_origins.each do |emission_origin|
+        csv_file << emission_origin.position.to_a + [Dates.format(emission_origin.date_time)]
+      end
+    end
   end
 
   class WindPeriod < Struct.new(:wind_reading, :duration, :chem_readings)
