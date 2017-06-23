@@ -16,7 +16,7 @@ params = ScriptParams.read!(
   {
     name:    "type",
     attr:    "reading_types",
-    default: [:errored],
+    default: [:very_atypical],
     cast:    -> (raw_types) { Array(raw_types).map(&:to_sym) }
   },
   {

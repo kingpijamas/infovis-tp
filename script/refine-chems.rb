@@ -37,17 +37,25 @@ MAX_REFINING_RUNS      = params.fetch(:max_refining_runs)
 STDDEVS_TO_BE_ATYPICAL = params.fetch(:atypical_stddevs)
 
 class DataRefiner
+  READING_TYPES = %i[normal atypical very_atipical]
+
   def refine(path)
     csv_headers, *csv_rows = CSV.read(path)
-    readings               = ChemReading.all_from(row)
+    readings               = ChemReading.all_from(csv_rows)
     readings_by_chemical   = readings.group_by(&:chemical)
 
     readings_by_chemical.each do |(_, readings_for_chemical)|
-      refined_readings_for_chemical = refine_readings(readings_for_chemical)
-      errored_readings_for_chemical = refine_readings(refined_readings_for_chemical.atypical).atypical
-      refined_readings_for_chemical.atypical -= errored_readings_for_chemical
+      refined_readings_for_chemical           = refine_readings(readings_for_chemical)
+      atypical_readings_for_chemical          = refined_readings_for_chemical.atypical
+      very_atipical_readings_for_chemical     = refine_readings(atypical_readings_for_chemical).atypical
+      refined_readings_for_chemical.atypical -= very_atipical_readings_for_chemical
 
-      store_readings_for_chemical(csv_headers, refined_readings_for_chemical, errored_readings_for_chemical)
+      store_readings_for_chemical(
+        csv_headers,
+        refined_readings_for_chemical,
+        very_atipical_readings_for_chemical
+      )
+
       print "."
     end
 
@@ -68,16 +76,16 @@ class DataRefiner
     readings
   end
 
-  def store_readings_for_chemical(headers, valid_readings, errored_readings)
-    %i[normal atypical errored].each do |reading_type|
+  def store_readings_for_chemical(headers, valid_readings, very_atipical_readings)
+    READING_TYPES.each do |reading_type|
       file_name = "#{OUTPUT_DIR}/#{valid_readings.chemical.downcase}-#{reading_type}.csv"
 
       CSV.open(file_name, "w") do |csv_file|
         csv_file << headers
 
         sorted_readings =
-          if reading_type == :errored
-            errored_readings
+          if reading_type == :very_atipical
+            very_atipical_readings
           else
             valid_readings.public_send(reading_type).sort
           end
