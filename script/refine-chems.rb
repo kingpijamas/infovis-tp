@@ -28,6 +28,12 @@ params = ScriptParams.read!(
     long_name: "StdDevs to be atypical",
     default:   1,
     cast:      :to_i
+  },
+  {
+    name:      "collisions",
+    attr:      "collision_handling",
+    default:   :drop_all,
+    cast:      :to_sym
   }
 )
 
@@ -35,25 +41,26 @@ INPUT_FILE             = params.fetch(:input_file)
 OUTPUT_DIR             = params.fetch(:output_dir)
 MAX_REFINING_RUNS      = params.fetch(:max_refining_runs)
 STDDEVS_TO_BE_ATYPICAL = params.fetch(:atypical_stddevs)
+COLLISION_HANDLING     = params.fetch(:collision_handling)
 
 class DataRefiner
-  READING_TYPES = %i[normal atypical very_atipical]
+  READING_TYPES = %i[normal atypical very_atypical]
 
   def refine(path)
     csv_headers, *csv_rows = CSV.read(path)
-    readings               = ChemReading.all_from(csv_rows)
+    readings               = handle_collisions(ChemReading.all_from(csv_rows))
     readings_by_chemical   = readings.group_by(&:chemical)
 
     readings_by_chemical.each do |(_, readings_for_chemical)|
       refined_readings_for_chemical           = refine_readings(readings_for_chemical)
       atypical_readings_for_chemical          = refined_readings_for_chemical.atypical
-      very_atipical_readings_for_chemical     = refine_readings(atypical_readings_for_chemical).atypical
-      refined_readings_for_chemical.atypical -= very_atipical_readings_for_chemical
+      very_atypical_readings_for_chemical     = refine_readings(atypical_readings_for_chemical).atypical
+      refined_readings_for_chemical.atypical -= very_atypical_readings_for_chemical
 
       store_readings_for_chemical(
         csv_headers,
         refined_readings_for_chemical,
-        very_atipical_readings_for_chemical
+        very_atypical_readings_for_chemical
       )
 
       print "."
@@ -63,6 +70,18 @@ class DataRefiner
   end
 
   private
+
+  def handle_collisions(readings)
+    return unless COLLISION_HANDLING == :drop_all
+
+    grouped_readings = readings.group_by do |reading|
+      [reading.date_time, reading.chemical, reading.monitor_id]
+    end
+
+    grouped_readings.each_with_object([]) do |(_, readings_in_group), result|
+      result.concat(readings_in_group) if readings_in_group.size <= 1
+    end
+  end
 
   def refine_readings(readings)
     prev_readings = readings = RefinedReadings.from(readings)
@@ -76,7 +95,7 @@ class DataRefiner
     readings
   end
 
-  def store_readings_for_chemical(headers, valid_readings, very_atipical_readings)
+  def store_readings_for_chemical(headers, valid_readings, very_atypical_readings)
     READING_TYPES.each do |reading_type|
       file_name = "#{OUTPUT_DIR}/#{valid_readings.chemical.downcase}-#{reading_type}.csv"
 
@@ -84,8 +103,8 @@ class DataRefiner
         csv_file << headers
 
         sorted_readings =
-          if reading_type == :very_atipical
-            very_atipical_readings
+          if reading_type == :very_atypical
+            very_atypical_readings
           else
             valid_readings.public_send(reading_type).sort
           end

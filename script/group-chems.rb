@@ -14,6 +14,11 @@ params = ScriptParams.read!(
     default: "data/processed/chems"
   },
   {
+    name:    "by",
+    attr:    "group_attr",
+    cast:    -> (group_attr) { group_attr.downcase.to_sym }
+  },
+  {
     name:    "type",
     attr:    "reading_types",
     default: [:very_atypical],
@@ -21,21 +26,25 @@ params = ScriptParams.read!(
   },
   {
     name:    "output-dir",
-    default: "data/processed/monitor-errors"
+    attr:    "root_output_dir",
+    default: "data/processed"
   }
 )
 
-INPUT_DIR     = params.fetch(:input_dir)
-OUTPUT_DIR    = params.fetch(:output_dir)
-READING_TYPES = params.fetch(:reading_types)
+INPUT_DIR       = params.fetch(:input_dir)
+ROOT_OUTPUT_DIR = params.fetch(:root_output_dir)
+READING_TYPES   = params.fetch(:reading_types)
+GROUP_ATTR      = params.fetch(:group_attr)
 
-class ChemDataMerger
-  def merge(path)
+OUTPUT_DIR      = "#{ROOT_OUTPUT_DIR}/groupings/#{GROUP_ATTR}/#{READING_TYPES.sort.join('-')}"
+
+class ChemDataGrouper
+  def group(path)
     csv_headers, readings = readings_in(path, READING_TYPES)
-    readings_by_monitor   = readings.group_by(&:monitor_id)
+    grouped_readings      = readings.group_by(&GROUP_ATTR)
 
-    readings_by_monitor.each do |(monitor_id, readings_for_monitor)|
-      store_monitor_readings(csv_headers, readings_for_monitor)
+    grouped_readings.each do |(_, readings_in_group)|
+      store_readings(csv_headers, readings_in_group)
     end
   end
 
@@ -54,10 +63,11 @@ class ChemDataMerger
     [csv_headers, readings]
   end
 
-  def store_monitor_readings(csv_headers, monitor_readings)
-    sorted_readings = monitor_readings.sort(&method(:sort_readings))
+  def store_readings(csv_headers, readings)
+    sorted_readings  = readings.sort(&method(:sort_readings))
+    group_attr_value = readings.first.public_send(GROUP_ATTR)
 
-    CSV.open("#{OUTPUT_DIR}/monitor-#{monitor_readings.first.monitor_id}.csv", "w") do |csv_file|
+    CSV.open("#{OUTPUT_DIR}/#{GROUP_ATTR}-#{group_attr_value}.csv", "w") do |csv_file|
       csv_file << csv_headers if csv_headers
       sorted_readings.each { |reading| csv_file << reading.to_a }
     end
@@ -72,4 +82,4 @@ class ChemDataMerger
 end
 
 FileUtils.mkdir_p OUTPUT_DIR
-ChemDataMerger.new.merge(INPUT_DIR)
+ChemDataGrouper.new.group(INPUT_DIR)
