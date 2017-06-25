@@ -34,4 +34,11 @@ WindReading = Struct.new(:raw_date_time, :raw_from_direction, :raw_speed) do
   def <=>(other)
     date_time <=> other.date_time
   end
+
+  def ==(other)
+    # NOTE: this is really weird, but equality seems to be broken by something I added...
+    # :/ fixing it this way
+    super unless other.is_a? WindReading
+    to_a == other.to_a
+  end
 end

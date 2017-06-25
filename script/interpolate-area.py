@@ -3,6 +3,7 @@ import argparse
 import csv
 import itertools as it
 import numpy as np
+from operator import attrgetter
 from collections import namedtuple
 from scipy.interpolate import LinearNDInterpolator
 
@@ -20,16 +21,26 @@ def parse_args():
                 if idx > 0
             ]
 
-    def load_readings(monitors_path, readings_path):
-        monitors = load_csv(monitors_path, Monitor)
-        readings = load_csv(readings_path, ChemReading)
+    def group_by(data, keyfunc):
+        data = sorted(data, key=keyfunc)
+        return {k: list(group) for k, group in it.groupby(data, keyfunc)}
 
-        return np.array([
-            RawReading(float(reading.value), float(monitor.x), float(monitor.y))
-            for reading, monitor
-            in it.product(readings, monitors)
-            if reading.monitor_id == monitor.id
-        ])
+    def load_readings(monitors_path, readings_path):
+        monitors = group_by(load_csv(monitors_path, Monitor), attrgetter('id'))
+        chem_readings = group_by(load_csv(readings_path, ChemReading), attrgetter('date_time'))
+
+        return {
+            time: map(associate_monitor(monitors), )
+            for time, chem_readings_for_time
+            in chem_readings
+        }
+
+    def associate_monitor(monitors):
+        def _associate(chem_readings):
+            monitor = monitors[chem_reading.monitor_id]
+            return RawReading(x=float(monitor.x), y=float(monitor.y), value=float(reading.value))
+
+        return _associate
 
     def parse_raw_args():
         parser = argparse.ArgumentParser(
@@ -52,7 +63,7 @@ def parse_args():
 
 
 start_point, end_point, readings = parse_args()
-reading_positions, reading_values = readings[:, [1, 2]], readings[:, 0]
+reading_positions, reading_values = readings[:, [0, 1]], readings[:, 2]
 value_interpolation = LinearNDInterpolator(reading_positions, reading_values)
 
 xs = np.array(range(start_point.x, end_point.x))
@@ -62,6 +73,12 @@ interpolated_values = [
     (x, y, value_interpolation(x, y))
     for x, y in it.product(xs, ys)
 ]
+
+# raw_xs = xrange(0, 10)
+# values = np.array(map(lambda x: (x, x, x * x), raw_xs))
+#
+# interp = LinearNDInterpolator(values[:, [0, 1]], values[:, 2])
+
 
 pdb.set_trace()
 

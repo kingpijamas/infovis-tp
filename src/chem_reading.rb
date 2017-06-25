@@ -5,7 +5,7 @@ ChemReading = Struct.new(:chemical, :raw_monitor_id, :raw_date_time, :raw_value)
   extend Forwardable
   include Comparable
 
-  def_delegators :date_time, *%i[year month day wday]
+  def_delegators :date_time, *%i[year month day wday hour]
 
   def self.all_from(rows)
     rows.map { |row| new(*row) }
@@ -29,6 +29,13 @@ ChemReading = Struct.new(:chemical, :raw_monitor_id, :raw_date_time, :raw_value)
 
   def value
     @value ||= raw_value.to_f
+  end
+
+  def ==(other)
+    # NOTE: this is really weird, but equality seems to be broken by something I added...
+    # :/ fixing it this way
+    super unless other.is_a? ChemReading
+    to_a == other.to_a
   end
 
   def <=>(other)

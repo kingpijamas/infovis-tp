@@ -72,7 +72,7 @@ class DataRefiner
   private
 
   def handle_collisions(readings)
-    return unless COLLISION_HANDLING == :drop_all
+    return readings unless COLLISION_HANDLING == :drop_all
 
     grouped_readings = readings.group_by do |reading|
       [reading.date_time, reading.chemical, reading.monitor_id]
