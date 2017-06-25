@@ -104,7 +104,7 @@ class DataRefiner
 
         sorted_readings =
           if reading_type == :very_atypical
-            very_atypical_readings
+            very_atypical_readings.sort
           else
             valid_readings.public_send(reading_type).sort
           end
