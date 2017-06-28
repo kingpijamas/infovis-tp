@@ -5,6 +5,7 @@ float gasScaleFactor = 200;
 String factoriesFile = "../../data/processed/factories.csv";
 String monitorsFile = "../../data/processed/monitors.csv";
 String gasesDir = "../../data/processed/gas";
+String outputDir = "../../data/processed/gas/images";
 
 float[][] loadFromCSV(String path, int fromCol, int toCol) {
   String[] lines = loadStrings(path);
@@ -42,21 +43,33 @@ String gasesFile(String chemical, int n) {
   return gasesDir + "/" + chemical + "/" + n + ".csv";
 }
 
+String outputImage(String chemical, int n) {
+  return outputDir + "/" + chemical + "/" + n + ".png";
+}
+
 void setup() {
   size(1000, 1000);
   frameRate(1);
 }
 
 int n = 0;
+String chemical = "agoc-3a";
 
 void draw() {
+  boolean fullLoop = false;
   try {
     background(#FFFFFF);
     printPoints(factoriesFile, 1, 2, #000000, 5, 1);
     printPoints(monitorsFile, 1, 2, #0000FF, 5, 1);
-    printPoints(gasesFile("agoc-3a", n), 0, 2, #008000, 2, gasScaleFactor);
+    printPoints(gasesFile(chemical, n), 0, 2, #008000, 2, gasScaleFactor);
+    
+    if (!fullLoop) {
+      save(outputImage(chemical, n));
+    }
+
     n += 1;
   } catch (Exception e) {
     n = 0;
+    fullLoop = true;
   }
 }
