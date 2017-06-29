@@ -16,27 +16,39 @@ float offsetY = +20;
 float scaleFactorX = 5;
 float scaleFactorY = 5;
 
+float timeX;
+float timeY;
 float weathervaneX;
 float weathervaneY;
 
 float[][] winds;
-int n = 0;
+String[] times;
+
+int n = -1;
 
 void setup() {
   size(600, 500);
-  frameRate(4);
+  frameRate(400);
   surface.setResizable(true);
 
-  winds = loadFromCSV(WINDS_FILE, 1, 2);
+  winds = loadFloatsFromCSV(WINDS_FILE, 1, 2);
+  times = loadLabelsFromCSV(WINDS_FILE, 0);
 }
 
 void draw() {
-  boolean fullLoop = false;
+  n += 1;
+
+  if (!areAllSaved()) {
+    noLoop();
+  }
+
   try {
     background(#FFFFFF);
     fixCoords();
 
     recalculateScale();
+
+    drawText(times[n], timeX, timeY);
 
     drawPoints(FACTORIES_FILE, 1, 2, #000000, 5);
     drawPoints(MONITORS_FILE, 1, 2, #0000FF, 5);
@@ -50,19 +62,16 @@ void draw() {
     }
     drawWeathervane(n, weathervaneX, weathervaneY, #000000, 2);
 
-    if (!fullLoop) {
+    if (!areAllSaved()) {
       save(outputImage(chemical, n));
     }
-
-    n += 1;
   } catch (Exception e) {
-    n = 0;
-    fullLoop = true;
+    // ignore it, there might be files missing
   }
 }
 
 void drawPoints(String path, int fromCol, int toCol, int rgb, int _width) {
-  float[][] points = loadFromCSV(path, fromCol, toCol);
+  float[][] points = loadFloatsFromCSV(path, fromCol, toCol);
   int dimension = toCol - fromCol + 1;
 
   strokeWeight(_width);
@@ -111,7 +120,7 @@ void drawText(String txt, float x, float y) {
   popMatrix();
 }
 
-float[][] loadFromCSV(String path, int fromCol, int toCol) {
+float[][] loadFloatsFromCSV(String path, int fromCol, int toCol) {
   String[] lines = loadStrings(path);
   float[][] values = new float[lines.length][toCol - fromCol + 1];
 
@@ -124,6 +133,18 @@ float[][] loadFromCSV(String path, int fromCol, int toCol) {
   }
   return values;
 }
+
+String[] loadLabelsFromCSV(String path, int col) {
+  String[] lines = loadStrings(path);
+  String[] values = new String[lines.length];
+
+  for (int i = 1; i < lines.length; i++) {
+    String[] lineValues = split(lines[i - 1], ',');
+    values[i - 1] = lineValues[col];
+  }
+  return values;
+}
+
 
 String gasesFile(String chemical, int n) {
   return GASES_DIR + "/" + chemical + "/" + n + ".csv";
@@ -144,6 +165,8 @@ String _dataFile(String path) {
 void recalculateScale() {
   //scaleFactorX = width / areaDim;
   //scaleFactorY = height / areaDim;
+  timeX = width * 0.1;
+  timeY = height * 0.9;
   weathervaneX = width * 0.9;
   weathervaneY = height * 0.9;
 }
@@ -151,4 +174,8 @@ void recalculateScale() {
 void fixCoords() {
   scale(1, -1);
   translate(0, -height);
+}
+
+boolean areAllSaved() {
+  return n < times.length;
 }
