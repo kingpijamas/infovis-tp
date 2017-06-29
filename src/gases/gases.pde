@@ -42,6 +42,9 @@ void draw() {
     drawPoints(MONITORS_FILE, 1, 2, #0000FF, 5);
     drawPoints(gasesFile(chemical, n), 0, 2, #008000, 2);
 
+    drawText("N", weathervaneX + 2, weathervaneY + 20);
+    drawArrow(weathervaneX, weathervaneY, 20, 0, #000000, 2);
+
     if (n > 0) {
       drawWeathervane(n - 1, weathervaneX, weathervaneY, #808080, 2);
     }
@@ -98,6 +101,14 @@ void drawArrow(float x1, float y1, float r, float phi, int rgb, int _width) {
   triangle(- a * 2 , - a, 0, 0, - a * 2, a);
   popMatrix();
   line(x1, y1, x2, y2);
+}
+
+void drawText(String txt, float x, float y) {
+  pushMatrix();
+  translate(x, y);
+  scale(1, -1);
+  text(txt, 0, 0);
+  popMatrix();
 }
 
 float[][] loadFromCSV(String path, int fromCol, int toCol) {
