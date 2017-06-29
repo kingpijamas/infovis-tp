@@ -6,18 +6,24 @@ String MONITORS_FILE = _dataFile("monitors");
 String WINDS_FILE = _dataFile("winds");
 
 int areaDim = 200;
-float scaleFactor = 4;
 float gasScaleFactor = 200;
 float windScaleFactor = 20;
 String chemical = "agoc-3a";
-float weathervaneX = 1000 / 2;
-float weathervaneY = 1000 / 2;
+
+float offsetX = -50;
+float offsetY = +20;
+
+float scaleFactorX = 5;
+float scaleFactorY = 5;
+
+float weathervaneX;
+float weathervaneY;
 
 float[][] winds;
 int n = 0;
 
 void setup() {
-  size(800, 800);
+  size(600, 500);
   frameRate(4);
   surface.setResizable(true);
 
@@ -29,6 +35,8 @@ void draw() {
   try {
     background(#FFFFFF);
     fixCoords();
+
+    recalculateScale();
 
     drawPoints(FACTORIES_FILE, 1, 2, #000000, 5);
     drawPoints(MONITORS_FILE, 1, 2, #0000FF, 5);
@@ -57,19 +65,21 @@ void drawPoints(String path, int fromCol, int toCol, int rgb, int _width) {
   strokeWeight(_width);
 
   for (float[] row : points) {
+    float x = row[0];
+    float y = row[1];
+    
     if (dimension == 2) {
       stroke(rgb);
-      point(row[0] * scaleFactor, row[1] * scaleFactor);
     } else {
       stroke(rgb, row[2] * gasScaleFactor);
-      point(row[0] * scaleFactor, row[1] * scaleFactor);
     }
+    point((offsetX + x) * scaleFactorX, (offsetY + y) * scaleFactorY);
   }
 }
 
 void drawWeathervane(int n, float x, float y, int rgb, int _width) {
   float[] wind = winds[n];
-  float phi = radians(wind[0] * -1);
+  float phi = radians(wind[0]);
   float speed = wind[1];
   drawArrow(x, y, speed * windScaleFactor, phi, rgb, _width);
 }
@@ -118,6 +128,13 @@ String dataDir(String path) {
 
 String _dataFile(String path) {
   return DATA_DIR + "/" + path + ".csv";
+}
+
+void recalculateScale() {
+  //scaleFactorX = width / areaDim;
+  //scaleFactorY = height / areaDim;
+  weathervaneX = width * 0.9;
+  weathervaneY = height * 0.9;
 }
 
 void fixCoords() {
