@@ -8,7 +8,7 @@ String WINDS_FILE = _dataFile("winds");
 int areaDim = 200;
 float gasScaleFactor = 200;
 float windScaleFactor = 20;
-String chemical = "appluimonia";
+String chemical = "chlorodinine";
 
 float offsetX = -50;
 float offsetY = +20;
@@ -52,7 +52,7 @@ void draw() {
 
     drawFactories(FACTORIES_FILE, 0, 1, 2, #000000, 5);
     drawMonitors(MONITORS_FILE, 0, 1, 2, #0000FF, 5);
-    drawGasPoints(gasesFile(chemical, n), 0, 2, #FF8C00, 2);
+    drawGasPoints(gasesFile(chemical, n), 0, 2, #800080, 2);
 
     drawText("N", weathervaneX + 2, weathervaneY + 20);
     drawArrow(weathervaneX, weathervaneY, 20, 0, #000000, 2);
