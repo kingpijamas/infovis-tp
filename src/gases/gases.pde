@@ -66,7 +66,8 @@ void draw() {
       save(outputImage(chemical, n));
     }
   } catch (Exception e) {
-    // ignore it, there might be files missing
+    // last file reached
+    noLoop();
   }
 }
 
